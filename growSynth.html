@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script type="text/javascript" src="web-audio-scheduler.js"></script>
+<style>
+body { font-family: sans-serif; 
+	color: red; 
+}
+
+#title {
+	text-align: center;
+}
+</style>
+</head>
+<body>
+	<h1 id="title"> Happy 2019 ! </h1>
+	<button id="start-button">start</button>
+	<button id="stop-button">stop</button>
+	<p id="status">ready to play</p>
+	<p id="score">score</p>
+	<script>
+	function Kerst ( ) {
+
+		const BPM = 30;
+		const quarterNote = (60.0 / BPM) / 3.0; 
+
+		const Nt = function(pitch,dur) {
+			return {"pitch": pitch, "dur": dur * quarterNote};
+		};
+
+		const Mod = function(interval,dur) {
+			return {"interval" : interval, "dur" : dur}; 
+		}
+
+		const Rst = function(dur) {
+			return {"pitch": -1, "dur" : dur};
+		};	
+
+		const randi = function(min, max) {
+		    min = Math.ceil(min);
+		    max = Math.floor(max);
+		    return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+
+		const ch = function (lst) {
+			return lst[ randi(0,lst.length-1) ];
+		};
+
+	// module notation
+	const createSong = function ( ) {
+		let index = 0;
+		const original = [
+			Nt(60,1),
+			Nt(65,0.75),
+			Nt(65,0.25),
+			Nt(65,1.5),
+			Nt(67,0.5),
+			Nt(69,0.75),
+			Nt(69,0.25),
+			Nt(69,1.5),
+			Nt(69,0.5),
+			Nt(67,0.5),
+			Nt(69,0.5),
+			Nt(70,1.0),
+			Nt(64,1.0),
+			Nt(67,0.75),
+			Nt(65,0.25),
+			Nt(65,1.0),
+			Rst(0.5),
+			Nt(72,0.5),
+			Nt(72,0.5),
+			Nt(69,0.5),
+			Nt(74,1.5),
+			Nt(72,0.5),
+			Nt(72,0.5*1.5),
+			Nt(70,0.5*0.5),
+			Nt(70,1.5),
+			Nt(70,0.5),
+			Nt(70,0.5),
+			Nt(67,0.5),
+			Nt(72,1.5),
+			Nt(70,0.5),
+			Nt(70,0.5*1.5),
+			Nt(69,0.5*0.5),
+			Nt(69,1.0),
+			Rst(0.5),
+			Nt(60,1),
+			Nt(65,0.75),
+			Nt(65,0.25),
+			Nt(65,1.5),
+			Nt(67,0.5),
+			Nt(69,0.75),
+			Nt(69,0.25),
+			Nt(69,1.5),
+			Nt(69,0.5),
+			Nt(67,0.5),
+			Nt(69,0.5),
+			Nt(70,1.0),
+			Nt(64,1.0),
+			Nt(67,0.75),
+			Nt(65,0.25),
+			Nt(65,1.0),
+			Rst(1.0)];
+
+		let score = original;
+		let seedIndex = 0; // holds the current pattern extraction point
+
+		const extractPattern = function(seedStart,seedLength) {
+			// extract relative pitches from a section of the song
+			let song = createSong();
+			let slice = song.getRange(seedStart,seedLength);
+			let previous = 60;
+		    let result = [];
+
+		    for (let i = 0;i<slice.length;i++) {
+		    	let note = slice[i];
+		    	if (note.pitch < 0) { 
+		    		note.pitch = 60 ;
+		    	};
+		    	let diff = note.pitch - previous;
+		    	previous = note.pitch;
+		    	result.push( Mod(diff,note.dur ));
+		    };
+
+		    const n1 = Mod(7,0.5);
+		    const n2 = Mod(12,0.25);
+		    const n3 = Mod(4,0.5);
+
+
+
+		    return result;
+		}
+
+		const applyPattern = function(mod) {
+			// replace each note of the score with the pattern extracted above
+			// divide all durations by number of modLength;
+			let result = [];
+			const direction = ch([-1,1]);
+			const modLength = mod.length;
+			for (let i = 0;i<score.length;i++) {
+				let oldNote = score[i];
+				for (let j = 0;j<mod.length;j++) {
+					let modNote = mod[j];
+					let newPitch = oldNote.pitch + (modNote.interval * direction);
+					while(newPitch > 98) { newPitch = newPitch - 12; };
+					let dur = ch([ mod[j].dur, 1.0]);
+					let newNote = Nt(newPitch, dur );
+					result.push(newNote);
+				}
+			}
+			return result;
+		}
+
+
+		const updateSeedIndex = function( ) {
+			seedIndex = Math.floor(Math.random() * score.length);
+		}
+
+		const iterator = {
+			next: function ( ) {
+				index = index % score.length;
+				return score[index++];
+			},
+
+			more: function ( ) {
+				if (index >= score.length) {
+					index = 0;
+					return false;
+				} 
+				return true;
+			},
+
+			setIndex: function ( index ) {
+				index = index % score.length;
+			},
+
+			getRange: function(start,length) {
+				let idx = start;
+				let result = [];
+				for (let i = 0;i<length;i++) {
+					idx = idx % score.length;
+					result.push( score[idx++] );
+				}
+				console.log('getrange',result);
+				return result;
+			},
+			nextVariation: function ( ) {
+				score = original; 
+				score = score.slice(0,original.length);
+
+				let seedLength = ch([2,3]); 
+				let pattern = extractPattern(seedIndex, seedLength);
+				updateSeedIndex(); // move pointer
+				score = applyPattern(pattern);
+			}
+		}
+		return iterator;
+	};
+
+	const ctx = new (AudioContext || webkitAudioContext)();
+	const sched = new WebAudioScheduler({ context: ctx });	
+	const song = createSong();
+
+	const playSong = function ( e ) {
+		const t0 = e.playbackTime;
+		let sum = 0.0;
+
+		song.nextVariation();
+
+        while(song.more()) {
+        	let nextNote = song.next();
+        	// schedule next event, parameters are provided seperately
+//debug
+        	sched.insert(t0 + sum, noteOn, nextNote);
+        	sum += nextNote.dur;
+        }
+		sched.insert(t0+sum,(e) => { song.nextVariation(); playSong(e)  } );
+	}
+
+	const mtof = function (midi) {
+		return 440.0 * Math.pow(2,(midi-69)/12.0);
+	}
+
+	const noteOn = function( e ) {
+		if (e.args.pitch < 0) {
+			// rest;
+			return;
+		}
+		let pitch = e.args.pitch;
+		let dur = e.args.dur;
+		let velo = e.args.velo;
+		let t0 = e.playbackTime;
+		let t1 = t0 + (dur * 2);
+
+		let osc = ctx.createOscillator();
+		let gain = ctx.createGain();
+		let filter = ctx.createBiquadFilter();
+		let panner = ctx.createPanner();
+		console.log("pitch", pitch,"t0",t0,"dur",dur);
+
+		gain.gain.setValueAtTime(0.1,t0);
+
+		gain.gain.linearRampToValueAtTime(0,t1);
+
+		osc.connect(gain);
+		gain.connect(filter);
+		filter.connect(ctx.destination);
+
+		let frequency = mtof(pitch);
+		// oscillator setup:
+		osc.type = 'square'	;
+		osc.frequency.value = frequency; // value in hertz
+		osc.start(t0);
+
+		// filter setup:
+		filter.type = "lowpass";
+		filter.frequency.setValueAtTime(frequency*2,t0);
+		filter.Q.value = 10;
+		filter.frequency.linearRampToValueAtTime(frequency,t1);
+
+		sched.insert(t1+0.2, () => { 
+			osc.stop();
+			osc = null;
+			gain = null;
+			filter = null;
+		});
+	}
+
+	document.getElementById("start-button").addEventListener("click", () => {
+ 	 	ctx.resume();
+ 	 	sched.start(playSong);  
+ 	 	document.getElementById("status").innerHTML = "playing";
+	});
+
+	document.getElementById("stop-button").addEventListener("click", () => {
+  		sched.stop(true);
+ 	 	document.getElementById("status").innerHTML = "stop";
+	});
+	console.log('hello', ctx.currentTime, sched);
+
+	// testnote noteOn({"pitch":64,"dur":4.0,"playbackTime":ctx.currentTime+1});
+
+	return {"ctx":ctx,"sched":sched};
+};
+
+var kerst = new Kerst();
+
+</script>
+
+</body>
+</html>

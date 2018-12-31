@@ -3,30 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <script type="text/javascript" src="web-audio-scheduler.js"></script>
+<script type="text/javascript" src="monkeypatch.js"></script>
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+
+<link href="https://fonts.googleapis.com/css?family=Mountains+of+Christmas" rel="stylesheet">
+
 <style>
+* {
+    font-family: 'Mountains of Christmas', cursive;
+}
+
 body { font-family: sans-serif; 
 	color: red; 
 }
 
+canvas {
+	width: 800px;
+	display:block;
+	margin-left:auto;
+	margin-right:auto;
+}
+
+.form-control {
+	width:200px;
+	margin-left:auto;
+	margin-right:auto;
+	text-align: center;
+}
+
 #title {
 	text-align: center;
+	font-size:72px;
+}
+
+#status {
+	text-align: center;
+}
+
+#note {
+	font-family: monospace;
+	width:200px;
+}
+
+h4 {
+	font-family: "Mountains of Christmas";
+	text-align:center;
 }
 </style>
 </head>
 <body>
-	<h1 id="title"> Happy 2019 ! </h1>
-	<button id="start-button">start</button>
-	<button id="stop-button">stop</button>
+	<div id="maindiv" class="container">
+	<h1 id="title"> Happy &nbsp;&nbsp; 2 0 1 9 !! </h1>
+	<div class="form-control">
+	<button class="btn-primary" id="start-button">start</button>
+	<button class="btn-seconday" id="stop-button">stop</button>
 	<p id="status">ready to play</p>
-	<p id="score">score</p>
+	<div id="visual"></div>
+	<p id="note"></p></div>
+	</div>
+	</div>
 	<script>
 	function Kerst ( ) {
 
-		const BPM = 30;
-		const quarterNote = (60.0 / BPM) / 3.0; 
+		let BPM = 40;
+		const quarterNote = () => { return (60.0 / BPM) / 3.0 }; 
 
 		const Nt = function(pitch,dur) {
-			return {"pitch": pitch, "dur": dur * quarterNote};
+			return {"pitch": pitch, "dur": dur };
 		};
 
 		const Mod = function(interval,dur) {
@@ -50,6 +93,8 @@ body { font-family: sans-serif;
 	// module notation
 	const createSong = function ( ) {
 		let index = 0;
+		let variation_number = 0;
+
 		const original = [
 			Nt(60,1),
 			Nt(65,0.75),
@@ -120,14 +165,17 @@ body { font-family: sans-serif;
 		    	};
 		    	let diff = note.pitch - previous;
 		    	previous = note.pitch;
-		    	result.push( Mod(diff,note.dur ));
+		    	console.log(diff,"diff,pitch");
+		    	result.push( Mod(diff, 1.0 ));
 		    };
 
-		    const n1 = Mod(7,0.5);
-		    const n2 = Mod(12,0.25);
-		    const n3 = Mod(4,0.5);
-
-
+		    if (Math.random() < 0.25) {
+			    result = [];
+			    let n = ch([2,3,4]);
+			    while(n--) {
+			    	result.push(Mod(ch([12,-12,7,4]),ch([1.0])));
+			    }
+			}
 
 		    return result;
 		}
@@ -155,6 +203,43 @@ body { font-family: sans-serif;
 
 		const updateSeedIndex = function( ) {
 			seedIndex = Math.floor(Math.random() * score.length);
+		}
+
+		const printSong = function ( ) {
+			const tDist = 5;
+			const pDist = 100;
+			const body = document.getElementById('visual');
+			const canvas = document.createElement('canvas');
+			const ctx = canvas.getContext('2d');
+			const titleNode = document.createElement('h4');
+			titleNode.innerHTML = "variation " + variation_number;
+			body.appendChild(titleNode);
+
+			canvas.width = 800;
+			canvas.height = 100;
+			ctx.fillStyle = ch("#ff0000","#00ff00");
+
+			let offset = 0;
+
+			const drawNote = function (context, note, index) {
+				let x = offset;
+				let y = (note.pitch / 128.0) * pDist;
+				let width = note.dur * tDist;
+				let height = 2;
+
+				offset += width;
+
+				ctx.fillRect(x,y,width,height);
+				ctx.stroke();
+
+				//console.log('drawRect',x,y,width,height);
+			}
+
+			console.log(score,'score');
+
+			score.map( (note,index) => { console.log(note,'drawnote'); drawNote(ctx,note,index)} );
+
+			body.appendChild(canvas);
 		}
 
 		const iterator = {
@@ -186,36 +271,53 @@ body { font-family: sans-serif;
 				return result;
 			},
 			nextVariation: function ( ) {
-				score = original; 
+				variation_number++;
+
+				console.log(BPM,"bpm");
+				BPM = 120;
+
+				//score = original; 
+				if (Math.random() < 0.25) {
+					score = original;
+				}
 				score = score.slice(0,original.length);
 
 				let seedLength = ch([2,3]); 
 				let pattern = extractPattern(seedIndex, seedLength);
 				updateSeedIndex(); // move pointer
 				score = applyPattern(pattern);
+			},
+			print: function () {
+				printSong();
 			}
 		}
 		return iterator;
 	};
 
-	const ctx = new (AudioContext || webkitAudioContext)();
+	const ctx = new AudioContext();
 	const sched = new WebAudioScheduler({ context: ctx });	
 	const song = createSong();
 
 	const playSong = function ( e ) {
 		const t0 = e.playbackTime;
 		let sum = 0.0;
+		// song.nextVariation();
 
-		song.nextVariation();
+		song.print();
 
         while(song.more()) {
         	let nextNote = song.next();
+
+        	nextNote.dur = nextNote.dur * quarterNote();
         	// schedule next event, parameters are provided seperately
 //debug
         	sched.insert(t0 + sum, noteOn, nextNote);
         	sum += nextNote.dur;
         }
-		sched.insert(t0+sum,(e) => { song.nextVariation(); playSong(e)  } );
+
+		sched.insert(t0+sum,(e) => { 
+			song.nextVariation(); 
+			playSong(e)});
 	}
 
 	const mtof = function (midi) {
@@ -231,7 +333,12 @@ body { font-family: sans-serif;
 		let dur = e.args.dur;
 		let velo = e.args.velo;
 		let t0 = e.playbackTime;
-		let t1 = t0 + (dur * 2);
+		let attack = dur * 0.05;
+		let tAttack = t0 + attack;
+		let t1 = t0 + dur;
+
+		let noteStatus = document.getElementById('note');
+		noteStatus.innerHTML = "pitch " + pitch + " - dur " + dur;
 
 		let osc = ctx.createOscillator();
 		let gain = ctx.createGain();
@@ -239,9 +346,12 @@ body { font-family: sans-serif;
 		let panner = ctx.createPanner();
 		console.log("pitch", pitch,"t0",t0,"dur",dur);
 
-		gain.gain.setValueAtTime(0.1,t0);
+		gain.gain.setValueAtTime(0.0,t0);
 
-		gain.gain.linearRampToValueAtTime(0,t1);
+		gain.gain.linearRampToValueAtTime(0.1,tAttack);
+		sched.insert(tAttack,() => {
+			gain.gain.linearRampToValueAtTime(0,t1);
+		});
 
 		osc.connect(gain);
 		gain.connect(filter);
@@ -249,14 +359,14 @@ body { font-family: sans-serif;
 
 		let frequency = mtof(pitch);
 		// oscillator setup:
-		osc.type = 'square'	;
+		osc.type = 'sawtooth';
 		osc.frequency.value = frequency; // value in hertz
 		osc.start(t0);
 
 		// filter setup:
 		filter.type = "lowpass";
-		filter.frequency.setValueAtTime(frequency*2,t0);
-		filter.Q.value = 10;
+		filter.frequency.setValueAtTime(frequency*4,t0);
+		filter.Q.value = 1;
 		filter.frequency.linearRampToValueAtTime(frequency,t1);
 
 		sched.insert(t1+0.2, () => { 

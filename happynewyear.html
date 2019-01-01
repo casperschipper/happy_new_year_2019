@@ -6,6 +6,8 @@
 <script type="text/javascript" src="monkeypatch.js"></script>
 <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <link href="https://fonts.googleapis.com/css?family=Mountains+of+Christmas" rel="stylesheet">
 
 <style>
@@ -24,6 +26,10 @@ canvas {
 	margin-right:auto;
 }
 
+.form-control {
+	height:75px;
+}
+
 .sub-text {
 	font-family: sans-serif;
 	font-size:14px;
@@ -40,7 +46,7 @@ canvas {
 
 #title {
 	text-align: center;
-	font-size:72px;
+	font-size:40px;
 }
 
 #status {
@@ -50,6 +56,13 @@ canvas {
 #note {
 	font-family: monospace;
 	width:200px;
+}
+
+.comment {
+	font-family: monospace;
+	color:green;
+	font-size:10px;
+	text-align:center;
 }
 
 h4 {
@@ -62,7 +75,8 @@ h4 {
 	<div id="maindiv" class="container">
 	<h1 id="title"> Happy &nbsp;&nbsp; 2 0 1 9 !! </h1>
 	<p class="sub-text"> Clicking start will begin 'oh dennenboom' variation generator.
-	Best wishes for next year!</p>
+	<br>Beste wensen voor 2019!</p>
+	<p class="comment">tip: you may need to unmute/turn up volume to hear the music</p>
 	<p class="sub-text"> Casper </p>
 	<div class="form-control">
 	<button class="btn-primary" id="start-button">start</button>
@@ -395,7 +409,7 @@ h4 {
 
 	document.getElementById("stop-button").addEventListener("click", () => {
   		sched.stop(true);
- 	 	document.getElementById("status").innerHTML = "stop";
+ 	 	document.getElementById("status").innerHTML = "stopped";
 	});
 	console.log('hello', ctx.currentTime, sched);
 
